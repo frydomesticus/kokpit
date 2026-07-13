@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Book } from '../../db';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
@@ -28,6 +29,11 @@ export default function BookDetailsPanel({
   const [editKalinanSayfa, setEditKalinanSayfa] = useState(book.kalinanSayfa);
   const [editSayfaSayisi, setEditSayfaSayisi] = useState(book.sayfaSayisi);
 
+  const bookmarks = useLiveQuery(
+    () => db.bookmarks.where('bookId').equals(book.id || '').toArray(),
+    [book.id]
+  ) || [];
+
   // Sync edits when selected book changes
   useEffect(() => {
     setEditAd(book.ad);
@@ -36,6 +42,13 @@ export default function BookDetailsPanel({
     setEditSayfaSayisi(book.sayfaSayisi);
     setEditMode(false);
   }, [book]);
+
+  const handleDeleteBookmark = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Bu ayracı silmek istediğinize emin misiniz?')) {
+      await db.bookmarks.delete(id);
+    }
+  };
 
   const handleDeleteBook = async () => {
     if (confirm('Bu kitabı kitaplığınızdan silmek istediğinize emin misiniz?')) {
@@ -161,6 +174,35 @@ export default function BookDetailsPanel({
               <div className="kp-projection-ok">
                 Sınava {daysToExam} gün var. Sınavdan{' '}
                 <strong>{margin} gün önce</strong> bitiyor (Güvenli Marj).
+              </div>
+            )}
+          </div>
+
+          {/* Bookmarks widget */}
+          <div className="kp-bookmarks-panel">
+            <div className="kp-bookmarks-title">Kitap Ayraçları ({bookmarks.length})</div>
+            {bookmarks.length === 0 ? (
+              <p className="text-xs kp-lbl-soft italic">Eklenmiş ayraç bulunmuyor.</p>
+            ) : (
+              <div className="kp-bookmarks-list">
+                {bookmarks.map((bm) => (
+                  <div key={bm.id} className="kp-bookmark-row">
+                    <div
+                      className="kp-bookmark-clickable"
+                      onClick={() => onOpenReader({ ...book, initialPage: bm.sayfa } as any)}
+                    >
+                      <span className="kp-bookmark-page-badge">S. {bm.sayfa}</span>
+                      <span className="kp-bookmark-label" title={bm.etiket}>{bm.etiket}</span>
+                    </div>
+                    <button
+                      className="kp-bookmark-delete-btn"
+                      onClick={(e) => handleDeleteBookmark(bm.id!, e)}
+                      title="Ayracı Sil"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -52,12 +52,41 @@ export interface Note {
   eklenme: Date;
 }
 
+export interface Bookmark {
+  id?: string;
+  bookId: string;
+  sayfa: number;
+  etiket: string;
+  eklenme: Date;
+}
+
+export interface StrokePoint {
+  x: number; // 0 to 1
+  y: number; // 0 to 1
+}
+
+export interface Stroke {
+  id: string;
+  color: string;
+  width: number;
+  isHighlighter: boolean;
+  points: StrokePoint[];
+}
+
+export interface Ink {
+  bookId: string;
+  sayfa: number;
+  strokes: Stroke[];
+}
+
 class KokpitDatabase extends Dexie {
   books!: Table<Book>;
   exams!: Table<Exam>;
   places!: Table<Place>;
   settings!: Table<Setting>;
   notes!: Table<Note>;
+  bookmarks!: Table<Bookmark>;
+  inks!: Table<Ink>;
 
   constructor() {
     super('KokpitDatabase');
@@ -67,6 +96,15 @@ class KokpitDatabase extends Dexie {
       places: 'id, ad',
       settings: 'key',
       notes: 'id, ay'
+    });
+    this.version(2).stores({
+      books: 'id, ders, ad',
+      exams: 'id, tarih',
+      places: 'id, ad',
+      settings: 'key',
+      notes: 'id, ay',
+      bookmarks: 'id, bookId, sayfa',
+      inks: '[bookId+sayfa], bookId'
     });
   }
 }

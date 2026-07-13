@@ -40,7 +40,9 @@ export default function SettingsPanel() {
       backupData.places = await db.places.toArray();
       backupData.settings = await db.settings.toArray();
       backupData.notes = await db.notes.toArray();
-      backupData.version = 1;
+      backupData.bookmarks = await db.bookmarks.toArray();
+      backupData.inks = await db.inks.toArray();
+      backupData.version = 2;
       backupData.exportedAt = new Date().toISOString();
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -67,7 +69,7 @@ export default function SettingsPanel() {
       const fileText = await file.text();
       const backupData = JSON.parse(fileText);
 
-      if (backupData.version !== 1) {
+      if (backupData.version !== 1 && backupData.version !== 2) {
         alert('Hata: Uyumsuz yedek dosyası sürümü.');
         return;
       }
@@ -76,7 +78,9 @@ export default function SettingsPanel() {
         `- Kitap Bilgisi Sayısı: ${backupData.books?.length || 0}\n` +
         `- Deneme Sınavı Sayısı: ${backupData.exams?.length || 0}\n` +
         `- Kütüphane / Mekan Sayısı: ${backupData.places?.length || 0}\n` +
-        `- Güncel Bilgiler Sayfası: ${backupData.notes?.length || 0}\n\n` +
+        `- Güncel Bilgiler Sayfası: ${backupData.notes?.length || 0}\n` +
+        `- Kitap Ayracı Sayısı: ${backupData.bookmarks?.length || 0}\n` +
+        `- Çözülmüş Sayfa Çizimi Sayısı: ${backupData.inks?.length || 0}\n\n` +
         `Bu verileri mevcut verilerinizle birleştirmek istiyor musunuz?`;
 
       if (confirm(infoMsg)) {
@@ -103,6 +107,16 @@ export default function SettingsPanel() {
         if (backupData.settings) {
           for (const setting of backupData.settings) {
             await db.settings.put(setting);
+          }
+        }
+        if (backupData.bookmarks) {
+          for (const bm of backupData.bookmarks) {
+            await db.bookmarks.put(bm);
+          }
+        }
+        if (backupData.inks) {
+          for (const ink of backupData.inks) {
+            await db.inks.put(ink);
           }
         }
         alert('İthalat protokolü tamamlandı. Sayfa yeniden yükleniyor...');
