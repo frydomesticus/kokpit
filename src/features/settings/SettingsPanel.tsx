@@ -42,7 +42,8 @@ export default function SettingsPanel() {
       backupData.notes = await db.notes.toArray();
       backupData.bookmarks = await db.bookmarks.toArray();
       backupData.inks = await db.inks.toArray();
-      backupData.version = 2;
+      backupData.mapFeatures = await db.mapFeatures.toArray();
+      backupData.version = 3;
       backupData.exportedAt = new Date().toISOString();
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -69,7 +70,7 @@ export default function SettingsPanel() {
       const fileText = await file.text();
       const backupData = JSON.parse(fileText);
 
-      if (backupData.version !== 1 && backupData.version !== 2) {
+      if (backupData.version !== 1 && backupData.version !== 2 && backupData.version !== 3) {
         alert('Hata: Uyumsuz yedek dosyası sürümü.');
         return;
       }
@@ -80,7 +81,8 @@ export default function SettingsPanel() {
         `- Kütüphane / Mekan Sayısı: ${backupData.places?.length || 0}\n` +
         `- Güncel Bilgiler Sayfası: ${backupData.notes?.length || 0}\n` +
         `- Kitap Ayracı Sayısı: ${backupData.bookmarks?.length || 0}\n` +
-        `- Çözülmüş Sayfa Çizimi Sayısı: ${backupData.inks?.length || 0}\n\n` +
+        `- Çözülmüş Sayfa Çizimi Sayısı: ${backupData.inks?.length || 0}\n` +
+        `- Harita Çalışma Noktası Sayısı: ${backupData.mapFeatures?.length || 0}\n\n` +
         `Bu verileri mevcut verilerinizle birleştirmek istiyor musunuz?`;
 
       if (confirm(infoMsg)) {
@@ -117,6 +119,11 @@ export default function SettingsPanel() {
         if (backupData.inks) {
           for (const ink of backupData.inks) {
             await db.inks.put(ink);
+          }
+        }
+        if (backupData.mapFeatures) {
+          for (const feat of backupData.mapFeatures) {
+            await db.mapFeatures.put(feat);
           }
         }
         alert('İthalat protokolü tamamlandı. Sayfa yeniden yükleniyor...');

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { SEED_PLACES, SEED_FEATURES } from './seedData';
 
 export interface Book {
   id?: string;
@@ -79,6 +80,18 @@ export interface Ink {
   strokes: Stroke[];
 }
 
+export interface MapFeature {
+  id: string;
+  category: 'daglar' | 'akarsular' | 'platolar';
+  ad: string;
+  x: number;
+  y: number;
+  detay: string;
+  kpssNotu: string;
+  kullaniciNotu?: string;
+  yapildi?: boolean;
+}
+
 class KokpitDatabase extends Dexie {
   books!: Table<Book>;
   exams!: Table<Exam>;
@@ -87,6 +100,7 @@ class KokpitDatabase extends Dexie {
   notes!: Table<Note>;
   bookmarks!: Table<Bookmark>;
   inks!: Table<Ink>;
+  mapFeatures!: Table<MapFeature>;
 
   constructor() {
     super('KokpitDatabase');
@@ -105,6 +119,16 @@ class KokpitDatabase extends Dexie {
       notes: 'id, ay',
       bookmarks: 'id, bookId, sayfa',
       inks: '[bookId+sayfa], bookId'
+    });
+    this.version(3).stores({
+      books: 'id, ders, ad',
+      exams: 'id, tarih',
+      places: 'id, ad',
+      settings: 'key',
+      notes: 'id, ay',
+      bookmarks: 'id, bookId, sayfa',
+      inks: '[bookId+sayfa], bookId',
+      mapFeatures: 'id, category'
     });
   }
 }
@@ -125,47 +149,11 @@ export async function seedDatabase() {
 
   const placesCount = await db.places.count();
   if (placesCount === 0) {
-    await db.places.bulkAdd([
-      {
-        id: '1',
-        ad: 'Atatürk Kitaplığı',
-        ilce: 'Beyoğlu',
-        kurum: 'İBB',
-        acilis: 0,
-        kapanis: 24,
-        yediYirmiDort: true,
-        notum: 'Boğaz manzaralı, sabah erken gitmek gerekiyor.'
-      },
-      {
-        id: '2',
-        ad: 'Beyazıt Devlet Kütüphanesi',
-        ilce: 'Fatih',
-        kurum: 'Devlet',
-        acilis: 9,
-        kapanis: 22,
-        yediYirmiDort: false,
-        notum: 'Tarihi atmosfer, sessizlik mükemmel.'
-      },
-      {
-        id: '3',
-        ad: 'İPA İstanbul Kitaplığı',
-        ilce: 'Florya',
-        kurum: 'İBB',
-        acilis: 9,
-        kapanis: 18,
-        yediYirmiDort: false,
-        notum: 'Doğa içinde sakin bir çalışma ortamı.'
-      },
-      {
-        id: '4',
-        ad: 'Sultanbeyli İlçe Halk Kütüphanesi',
-        ilce: 'Sultanbeyli',
-        kurum: 'Diğer',
-        acilis: 9,
-        kapanis: 19,
-        yediYirmiDort: false,
-        notum: 'Sessiz ve düzenli çalışma alanları.'
-      }
-    ]);
+    await db.places.bulkAdd(SEED_PLACES);
+  }
+
+  const featuresCount = await db.mapFeatures.count();
+  if (featuresCount === 0) {
+    await db.mapFeatures.bulkAdd(SEED_FEATURES);
   }
 }

@@ -9,9 +9,10 @@ import SimulationPanel from './features/simulation/SimulationPanel';
 import StudyPlaces from './features/places/StudyPlaces';
 import GuncelNotes from './features/notes/GuncelNotes';
 import SettingsPanel from './features/settings/SettingsPanel';
-import { BookOpen, Award, BarChart2, MapPin, Edit3, Settings } from 'lucide-react';
+import AtlasAcademy from './features/atlas/AtlasAcademy';
+import { BookOpen, Award, BarChart2, MapPin, Edit3, Settings, Map } from 'lucide-react';
 
-type Tab = 'library' | 'exams' | 'simulation' | 'places' | 'notes' | 'settings';
+type Tab = 'library' | 'exams' | 'simulation' | 'places' | 'notes' | 'settings' | 'atlas';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('library');
@@ -27,7 +28,7 @@ export default function App() {
     initDB();
   }, []);
 
-  // Keyboard Shortcuts: 1-6 switches tabs
+  // Keyboard Shortcuts: 1-7 switches tabs
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
       // Avoid firing hotkeys when user is actively typing in inputs/textareas
@@ -42,6 +43,7 @@ export default function App() {
       if (e.key === '4') setActiveTab('places');
       if (e.key === '5') setActiveTab('notes');
       if (e.key === '6') setActiveTab('settings');
+      if (e.key === '7') setActiveTab('atlas');
     };
 
     window.addEventListener('keydown', handleKeys);
@@ -111,6 +113,13 @@ export default function App() {
           <Settings size={16} />
           <span>AYARLAR [6]</span>
         </button>
+        <button
+          className={`kp-tab-btn ${activeTab === 'atlas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('atlas')}
+        >
+          <Map size={16} />
+          <span>ATLAS [7]</span>
+        </button>
       </div>
 
       {/* Workspace Display Area */}
@@ -137,6 +146,10 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <SettingsPanel />
+        )}
+
+        {activeTab === 'atlas' && (
+          <AtlasAcademy />
         )}
       </main>
 
