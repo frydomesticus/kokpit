@@ -1,11 +1,16 @@
-<div align="center">
+# Kokpit
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Kişisel KPSS hazırlık kokpiti. Local-first PWA: sunucu yok, hesap yok, veri cihazda.
 
-  <h1>Built with AI Studio</h2>
+Sınav geri sayımı ve kalan deneme pazarları · PDF kitaplık (raf görünümü, kaldığın sayfayı hatırlar) · ÖSYM şablonlu deneme defteri ve net trendi · Monte Carlo net tahmin simülatörü · çalışma mekanları · güncel bilgiler günlüğü.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Çalıştırma
+```bash
+npm install
+npm run dev
+```
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Mimari
+React 19 + TypeScript + Vite · Dexie.js (IndexedDB) tek doğruluk kaynağı, useLiveQuery ile reaktif okuma · pdfjs-dist (yerel worker) · özellik-bazlı klasör yapısı (db / features / lib / ui) · vite-plugin-pwa ile offline.
 
-</div>
+Veriler JSON olarak dışa/içe aktarılabilir (Ayarlar sekmesi). PDF dosyalarının kendisi yedeğe dahil değildir.
