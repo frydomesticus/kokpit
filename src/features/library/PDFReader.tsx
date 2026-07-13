@@ -137,6 +137,16 @@ export default function PDFReader({ book, onClose }: PDFReaderProps) {
         </div>
 
         <div className="kp-reader-nav-right">
+          <Button
+            variant={drawingEnabled ? 'primary' : 'secondary'}
+            onClick={() => setDrawingEnabled(!drawingEnabled)}
+            title="Çözüm Modu (Kalemle Yaz/Çiz - Kısayol: K)"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Edit2 size={14} />
+            <span>{drawingEnabled ? 'Çözümü Kapat' : 'Çözüm Modu'}</span>
+          </Button>
+
           <div className="kp-reader-nav-bookmarks-dropdown">
             <Button variant="secondary" onClick={() => setBookmarksDropdownOpen(!bookmarksDropdownOpen)}>
               <Bookmark size={16} /> Ayraçlar <ChevronDown size={12} />
