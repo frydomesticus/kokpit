@@ -4,21 +4,13 @@ import { db, type Book } from '../../db';
 import { isFileSystemAccessSupported, scanDirectoryForPDFs, verifyPermission } from '../../lib/fs-access';
 import { getPDFPageCount, generateThumbnail } from '../../lib/pdf-thumbs';
 import Button from '../../ui/Button';
-import Badge from '../../ui/Badge';
-import Card from '../../ui/Card';
 import EmptyState from '../../ui/EmptyState';
-import { BookOpen, FolderOpen, Upload, Trash2, ChevronRight, Edit2, Check } from 'lucide-react';
+import BookDetailsPanel from './BookDetailsPanel';
+import { BookOpen, FolderOpen, Upload } from 'lucide-react';
 
 const DERS_LER = ['Türkçe', 'Matematik', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Denemeler'];
 
-const SPINE_COLORS = [
-  '#2C4A6E', // Dosya mavisi
-  '#7A302B', // Mühür kırmızısı koyu
-  '#2E5C3B', // Ok yeşili koyu
-  '#5C4A37', // Klasik taba
-  '#4A3E56', // Koyu mor
-  '#3E4A56', // Slate gri
-];
+const SPINE_COLORS = ['#2C4A6E', '#7A302B', '#2E5C3B', '#5C4A37', '#4A3E56', '#3E4A56'];
 
 export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) => void }) {
   const books = useLiveQuery(() => db.books.toArray()) || [];
@@ -34,11 +26,6 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
   const [folderHandle, setFolderHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [hasFolderPermission, setHasFolderPermission] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editAd, setEditAd] = useState('');
-  const [editDers, setEditDers] = useState('');
-  const [editKalinanSayfa, setEditKalinanSayfa] = useState(1);
-  const [editSayfaSayisi, setEditSayfaSayisi] = useState(100);
 
   // Load existing directory handle
   useEffect(() => {
@@ -162,67 +149,11 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
     setIsScanning(false);
   };
 
-  const handleDeleteBook = async (id: string) => {
-    if (confirm('Bu kitabı kitaplığınızdan silmek istediğinize emin misiniz?')) {
-      await db.books.delete(id);
-      setSelectedBook(null);
-    }
-  };
-
-  const handleStartEdit = (book: Book) => {
-    setEditAd(book.ad);
-    setEditDers(book.ders);
-    setEditKalinanSayfa(book.kalinanSayfa);
-    setEditSayfaSayisi(book.sayfaSayisi);
-    setEditMode(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!selectedBook || !selectedBook.id) return;
-    
-    // Clamp pages
-    const kalinan = Math.min(Math.max(1, editKalinanSayfa), editSayfaSayisi);
-
-    await db.books.update(selectedBook.id, {
-      ad: editAd,
-      ders: editDers,
-      kalinanSayfa: kalinan,
-      sayfaSayisi: editSayfaSayisi
-    });
-
-    const updatedBook = await db.books.get(selectedBook.id);
-    if (updatedBook) {
-      setSelectedBook(updatedBook);
-    }
-    setEditMode(false);
-  };
-
   // Group books by ders
   const groupedBooks = DERS_LER.reduce((acc, ders) => {
     acc[ders] = books.filter(b => b.ders === ders);
     return acc;
   }, {} as Record<string, Book[]>);
-
-  // Projection math
-  const getProjection = (book: Book) => {
-    const remainingPages = Math.max(0, book.sayfaSayisi - book.kalinanSayfa);
-    const daysToFinish = dailyPageRate > 0 ? Math.ceil(remainingPages / dailyPageRate) : 0;
-    
-    const now = new Date();
-    const diffMs = examDate.getTime() - now.getTime();
-    const daysToExam = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-    
-    const margin = daysToExam - daysToFinish;
-    const isLate = margin < 0;
-
-    return {
-      daysToFinish,
-      daysToExam,
-      margin: Math.abs(margin),
-      isLate,
-      remainingPages
-    };
-  };
 
   const handleOpenReader = async (book: Book) => {
     // If FileSystemHandle was used, we need to load the file blob dynamically
@@ -305,7 +236,7 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
                               backgroundColor: book.renk,
                               borderLeft: `5px solid rgba(255, 255, 255, 0.15)`
                             }}
-                            onClick={() => { setSelectedBook(book); setEditMode(false); }}
+                            onClick={() => { setSelectedBook(book); }}
                             title={`${book.ad} (${progress}%)`}
                           >
                             <div className="kp-book-spine-title">{book.ad}</div>
@@ -323,113 +254,13 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
 
         {/* Selected Book Details Panel */}
         {selectedBook && (
-          <Card className="kp-book-details-panel">
-            <div className="kp-details-header">
-              <Badge variant="dosya">{selectedBook.ders.toUpperCase()}</Badge>
-              <div className="kp-details-actions">
-                <Button variant="secondary" onClick={() => handleStartEdit(selectedBook)} title="Düzenle">
-                  <Edit2 size={14} />
-                </Button>
-                <Button variant="danger" onClick={() => handleDeleteBook(selectedBook.id!)} title="Sil">
-                  <Trash2 size={14} />
-                </Button>
-              </div>
-            </div>
-
-            {editMode ? (
-              <div className="kp-book-edit-form">
-                <div className="kp-form-group">
-                  <label>Kitap Adı</label>
-                  <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} />
-                </div>
-                <div className="kp-form-group">
-                  <label>Ders Kategorisi</label>
-                  <select value={editDers} onChange={e => setEditDers(e.target.value)}>
-                    {DERS_LER.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="kp-form-group-row">
-                  <div className="kp-form-group">
-                    <label>Kalan/Kalınalan Sayfa</label>
-                    <input type="number" min={1} value={editKalinanSayfa} onChange={e => setEditKalinanSayfa(parseInt(e.target.value) || 1)} />
-                  </div>
-                  <div className="kp-form-group">
-                    <label>Toplam Sayfa</label>
-                    <input type="number" min={1} value={editSayfaSayisi} onChange={e => setEditSayfaSayisi(parseInt(e.target.value) || 100)} />
-                  </div>
-                </div>
-                <div className="kp-form-buttons">
-                  <Button variant="secondary" onClick={() => setEditMode(false)}>Vazgeç</Button>
-                  <Button variant="primary" onClick={handleSaveEdit}>
-                    <Check size={14} /> Kaydet
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="kp-book-info">
-                  {selectedBook.thumbDataUrl ? (
-                    <img src={selectedBook.thumbDataUrl} alt="Kapak" className="kp-book-details-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="kp-book-details-cover-fallback" style={{ backgroundColor: selectedBook.renk }}>
-                      <span>PDF</span>
-                    </div>
-                  )}
-                  
-                  <h3 className="kp-book-title-display">{selectedBook.ad}</h3>
-                  <p className="kp-book-filename-display">Dosya: {selectedBook.dosyaAdi}</p>
-                </div>
-
-                <div className="kp-book-progress-stats">
-                  <div className="kp-progress-stat-line">
-                    <span className="kp-lbl-soft">İLERLEME DERECESİ</span>
-                    <span className="kp-lbl-mono font-bold">
-                      {Math.round((selectedBook.kalinanSayfa / selectedBook.sayfaSayisi) * 100)}%
-                    </span>
-                  </div>
-                  <div className="kp-progress-bar-bg">
-                    <div
-                      className="kp-progress-bar-fill"
-                      style={{ width: `${(selectedBook.kalinanSayfa / selectedBook.sayfaSayisi) * 100}%` }}
-                    />
-                  </div>
-                  <div className="kp-progress-pages-detail">
-                    <span>{selectedBook.kalinanSayfa}. sayfadasınız</span>
-                    <span>Toplam {selectedBook.sayfaSayisi} sayfa</span>
-                  </div>
-                </div>
-
-                {/* Projection Widget */}
-                {(() => {
-                  const proj = getProjection(selectedBook);
-                  return (
-                    <div className={`kp-projection-widget ${proj.isLate ? 'late' : 'on-time'}`}>
-                      <span className="kp-projection-header">LİNEER BİTİŞ ÖNGÖRÜSÜ</span>
-                      <p className="kp-projection-text">
-                        Günde <strong>{dailyPageRate} sayfa</strong> tempoyla kalan <strong>{proj.remainingPages} sayfa</strong>,{' '}
-                        <strong>{proj.daysToFinish} günde</strong> tamamlanır.
-                      </p>
-                      {proj.isLate ? (
-                        <div className="kp-projection-alert">
-                          Sınava {proj.daysToExam} gün var. Bu tempoyla sınavdan{' '}
-                          <strong className="text-stamp">{proj.margin} gün sonra</strong> bitiyor! Tempoyu artırın.
-                        </div>
-                      ) : (
-                        <div className="kp-projection-ok">
-                          Sınava {proj.daysToExam} gün var. Sınavdan{' '}
-                          <strong>{proj.margin} gün önce</strong> bitiyor (Güvenli Marj).
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                <Button variant="stamp" className="w-full mt-4" onClick={() => handleOpenReader(selectedBook)}>
-                  <BookOpen size={16} /> Kitabı Oku
-                </Button>
-              </>
-            )}
-          </Card>
+          <BookDetailsPanel
+            book={selectedBook}
+            dailyPageRate={dailyPageRate}
+            examDate={examDate}
+            onOpenReader={handleOpenReader}
+            onClose={() => setSelectedBook(null)}
+          />
         )}
       </div>
     </div>
