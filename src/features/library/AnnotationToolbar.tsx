@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Pen, Highlighter, Eraser, Undo2, Redo2, Bookmark, BookmarkCheck, X } from 'lucide-react';
+import { Pen, Highlighter, Eraser, Scissors, Undo2, Redo2, Bookmark, BookmarkCheck, X } from 'lucide-react';
 import { type DrawConfig } from './useDrawingState';
 
 interface ToolbarProps {
@@ -92,6 +92,16 @@ export default function AnnotationToolbar({
         onClick={() => onChangeConfig({ tool: 'eraser' })}
       >
         <Eraser size={18} />
+      </button>
+
+      {/* Soru Kes */}
+      <button
+        type="button"
+        title="Soru Kes"
+        className={`kp-annotation-btn-v3 ${config.tool === 'crop' ? 'active' : ''}`}
+        onClick={() => onChangeConfig({ tool: 'crop' })}
+      >
+        <Scissors size={18} />
       </button>
 
       <hr style={{ margin: '4px 6px', border: 'none', borderTop: '1px solid var(--line)' }} />

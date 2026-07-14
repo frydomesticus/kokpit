@@ -40,6 +40,21 @@ export default function PDFReader({ book, openAtPage, onClose }: PDFReaderProps)
     [book.id]
   ) || [];
 
+  const bookCrops = useLiveQuery(() => 
+    db.questionCrops.where('bookId').equals(book.id || '').toArray()
+  ) || [];
+  const pageCrops = bookCrops.filter(c => c.page === currentPage);
+
+  const allCrops = useLiveQuery(() => db.questionCrops.toArray()) || [];
+  const existingKonular = Array.from(new Set(allCrops.map(c => c.konu).filter(Boolean)));
+
+  const [cropDers, setCropDers] = useState(book.ders);
+  const [cropKonu, setCropKonu] = useState('');
+
+  useEffect(() => {
+    setCropDers(book.ders);
+  }, [book.ders, drawingState.activeCropRequest]);
+
   useTouchNavigation(containerRef, {
     zoom,
     setZoom,
@@ -239,6 +254,39 @@ export default function PDFReader({ book, openAtPage, onClose }: PDFReaderProps)
             {...drawingState.pointerHandlers}
           />
           {isPageBookmarked && <div className="kp-bookmark-ribbon" />}
+          
+          {/* Question Crops Overlay */}
+          <div className="kp-crops-overlay">
+            {pageCrops.map((crop, idx) => {
+              const x = crop.rect[0] * 100;
+              const y = crop.rect[1] * 100;
+              const w = crop.rect[2] * 100;
+              const h = crop.rect[3] * 100;
+              const isCropToolActive = drawingState.config.tool === 'crop';
+              return (
+                <div
+                  key={crop.id}
+                  className={`kp-crop-outline ${isCropToolActive ? 'interactive' : ''}`}
+                  style={{
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    width: `${w}%`,
+                    height: `${h}%`,
+                  }}
+                  onClick={() => {
+                    if (isCropToolActive) {
+                      if (confirm('Bu soru kesitini silmek istiyor musunuz?')) {
+                        db.questionCrops.delete(crop.id);
+                      }
+                    }
+                  }}
+                  title={isCropToolActive ? 'Silmek için tıklayın' : undefined}
+                >
+                  <span className="kp-crop-badge">{idx + 1}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -246,6 +294,68 @@ export default function PDFReader({ book, openAtPage, onClose }: PDFReaderProps)
         <span>Yön Tuşları (← →) ile sayfaları geçebilirsiniz · Dokunmatik sürükleme ile gezinebilir, kıstırarak yakınlaştırabilirsiniz.</span>
         <span>Ölçek: {zoom.toFixed(2)}x</span>
       </div>
+
+      {/* Crop Confirm Popover */}
+      {drawingState.activeCropRequest && (
+        <div
+          className="kp-crop-confirm-popover"
+          style={{
+            left: `${Math.min(window.innerWidth - 260, Math.max(10, drawingState.activeCropRequest.popoverPos.x - 120))}px`,
+            top: `${Math.min(window.innerHeight - 180, Math.max(10, drawingState.activeCropRequest.popoverPos.y - 140))}px`,
+          }}
+        >
+          <label>Ders</label>
+          <select value={cropDers} onChange={e => setCropDers(e.target.value)}>
+            {Array.from(new Set(['Türkçe', 'Matematik', 'Tarih', 'Coğrafya', 'Vatandaşlık', book.ders])).map(d => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+
+          <label>Konu (Alt Başlık)</label>
+          <input
+            type="text"
+            placeholder="Örn: Rasyonel Sayılar"
+            value={cropKonu}
+            onChange={e => setCropKonu(e.target.value)}
+            list="crop-konu-suggestions"
+          />
+          <datalist id="crop-konu-suggestions">
+            {existingKonular.map(k => <option key={k} value={k} />)}
+          </datalist>
+
+          <div className="kp-crop-confirm-actions">
+            <Button
+              variant="primary"
+              size="small"
+              onClick={async () => {
+                await db.questionCrops.add({
+                  id: newId(),
+                  bookId: book.id || '',
+                  page: currentPage,
+                  rect: drawingState.activeCropRequest!.rect,
+                  ders: cropDers,
+                  konu: cropKonu.trim() || 'Genel',
+                  created: new Date()
+                });
+                setCropKonu('');
+                drawingState.setActiveCropRequest(null);
+              }}
+            >
+              Kaydet
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => {
+                setCropKonu('');
+                drawingState.setActiveCropRequest(null);
+              }}
+            >
+              Vazgeç
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

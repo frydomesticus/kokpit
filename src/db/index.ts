@@ -61,6 +61,25 @@ export interface Bookmark {
   created: Date;
 }
 
+export interface QuestionCrop {
+  id: string;
+  bookId: string;
+  page: number;
+  rect: [number, number, number, number]; // [nx, ny, nw, nh]
+  ders: string;
+  konu: string;
+  created: Date;
+}
+
+export interface Session {
+  id: string;
+  ad: string;
+  tip: 'sayfa' | 'soru';
+  kaynaklar: string[];
+  bookId: string;
+  created: Date;
+}
+
 export interface Stroke {
   id: string;
   tool: 'pen' | 'highlighter';
@@ -97,6 +116,8 @@ class KokpitDatabase extends Dexie {
   bookmarks!: Table<Bookmark>;
   inks!: Table<Ink>;
   mapFeatures!: Table<MapFeature>;
+  questionCrops!: Table<QuestionCrop>;
+  sessions!: Table<Session>;
 
   constructor() {
     super('KokpitDB');
@@ -109,6 +130,10 @@ class KokpitDatabase extends Dexie {
       bookmarks: 'id, bookId',
       inks: '[bookId+page], bookId',
       mapFeatures: 'id, category'
+    });
+    this.version(2).stores({
+      questionCrops: 'id, bookId, ders, konu',
+      sessions: 'id, created'
     });
   }
 }

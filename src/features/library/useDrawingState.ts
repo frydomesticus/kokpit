@@ -4,7 +4,7 @@ import { drawStrokeOnContext, hitTestStroke } from '../../lib/drawing-utils';
 import { newId } from '../../lib/id';
 
 export interface DrawConfig {
-  tool: 'pen' | 'highlighter' | 'eraser';
+  tool: 'pen' | 'highlighter' | 'eraser' | 'crop';
   color: string;
   size: number;
 }
@@ -22,6 +22,12 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
   const isDrawingRef = useRef(false);
   const activeStrokeIdRef = useRef<string | null>(null);
   const currentPointsRef = useRef<[number, number, number][]>([]);
+  
+  const cropStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [activeCropRequest, setActiveCropRequest] = useState<{
+    rect: [number, number, number, number];
+    popoverPos: { x: number; y: number };
+  } | null>(null);
 
   // Load configuration from settings table on mount
   useEffect(() => {
@@ -116,6 +122,10 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
 
     if (config.tool === 'eraser') {
       eraseAt(x, y);
+    } else if (config.tool === 'crop') {
+      cropStartRef.current = { x, y };
+      const ctx = canvas.getContext('2d');
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
     } else {
       const strokeId = newId();
       activeStrokeIdRef.current = strokeId;
@@ -145,6 +155,23 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
       eraseAt(x, y);
+    } else if (config.tool === 'crop') {
+      const ctx = canvas.getContext('2d');
+      if (ctx && cropStartRef.current) {
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+
+        const px = cropStartRef.current.x * canvas.width;
+        const py = cropStartRef.current.y * canvas.height;
+        const pw = (x - cropStartRef.current.x) * canvas.width;
+        const ph = (y - cropStartRef.current.y) * canvas.height;
+        ctx.strokeRect(px, py, pw, ph);
+        ctx.setLineDash([]);
+      }
     } else {
       // Coalesced events tracking
       const events = e.nativeEvent.getCoalescedEvents?.() || [e.nativeEvent];
@@ -176,7 +203,31 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
     const canvas = e.currentTarget;
     canvas.releasePointerCapture(e.pointerId);
 
-    if (config.tool !== 'eraser' && activeStrokeIdRef.current) {
+    if (config.tool === 'crop') {
+      if (cropStartRef.current) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+
+        const x1 = Math.min(cropStartRef.current.x, x);
+        const y1 = Math.min(cropStartRef.current.y, y);
+        const x2 = Math.max(cropStartRef.current.x, x);
+        const y2 = Math.max(cropStartRef.current.y, y);
+        const nw = x2 - x1;
+        const nh = y2 - y1;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (nw > 0.02 && nh > 0.02) {
+          setActiveCropRequest({
+            rect: [x1, y1, nw, nh],
+            popoverPos: { x: e.clientX, y: e.clientY }
+          });
+        }
+      }
+      cropStartRef.current = null;
+    } else if (config.tool !== 'eraser' && activeStrokeIdRef.current) {
       const rect = canvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
@@ -206,6 +257,7 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
     isDrawingRef.current = false;
     activeStrokeIdRef.current = null;
     currentPointsRef.current = [];
+    cropStartRef.current = null;
     const canvas = e.currentTarget;
     canvas.releasePointerCapture(e.pointerId);
 
@@ -235,6 +287,8 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
     clearPage,
     canUndo: undoStack.current.length > 0,
     canRedo: redoStack.current.length > 0,
+    activeCropRequest,
+    setActiveCropRequest,
     pointerHandlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,

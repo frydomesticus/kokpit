@@ -11,9 +11,10 @@ import StudyPlaces from './features/places/StudyPlaces';
 import GuncelNotes from './features/notes/GuncelNotes';
 import SettingsPanel from './features/settings/SettingsPanel';
 import AtlasAcademy from './features/atlas/AtlasAcademy';
-import { BookOpen, Award, BarChart2, MapPin, Edit3, Settings, Map } from 'lucide-react';
+import SessionBuilder from './features/sessions/SessionBuilder';
+import { BookOpen, Award, BarChart2, MapPin, Edit3, Settings, Map, Layers } from 'lucide-react';
 
-type Tab = 'library' | 'exams' | 'simulation' | 'places' | 'notes' | 'settings' | 'atlas';
+type Tab = 'library' | 'exams' | 'simulation' | 'places' | 'notes' | 'settings' | 'atlas' | 'session';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('library');
@@ -62,6 +63,7 @@ export default function App() {
       if (e.key === '5') setActiveTab('notes');
       if (e.key === '6') setActiveTab('settings');
       if (e.key === '7') setActiveTab('atlas');
+      if (e.key === '8') setActiveTab('session');
     };
 
     window.addEventListener('keydown', handleKeys);
@@ -138,6 +140,13 @@ export default function App() {
           <Map size={16} />
           <span>ATLAS [7]</span>
         </button>
+        <button
+          className={`kp-tab-btn ${activeTab === 'session' ? 'active' : ''}`}
+          onClick={() => setActiveTab('session')}
+        >
+          <Layers size={16} />
+          <span>OTURUM [8]</span>
+        </button>
       </div>
 
       {/* Workspace Display Area */}
@@ -168,6 +177,10 @@ export default function App() {
 
         {activeTab === 'atlas' && (
           <AtlasAcademy />
+        )}
+
+        {activeTab === 'session' && (
+          <SessionBuilder onOpenBook={handleOpenBook} />
         )}
       </main>
 

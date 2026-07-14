@@ -34,6 +34,12 @@ export default function BookDetailsPanel({
     [book.id]
   ) || [];
 
+  const bookCrops = useLiveQuery(
+    () => db.questionCrops.where('bookId').equals(book.id || '').toArray(),
+    [book.id]
+  ) || [];
+  const cropCount = bookCrops.length;
+
   // Sync edits when selected book changes
   useEffect(() => {
     setEditAd(book.ad);
@@ -156,6 +162,11 @@ export default function BookDetailsPanel({
               <span>{book.kalinanSayfa}. sayfadasınız</span>
               <span>Toplam {book.sayfaSayisi} sayfa</span>
             </div>
+            {cropCount > 0 && (
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--stamp)', marginTop: '8px', textAlign: 'center' }}>
+                Bu kitaptan kesilmiş {cropCount} soru bulunuyor.
+              </div>
+            )}
           </div>
 
           {/* Projection Widget */}

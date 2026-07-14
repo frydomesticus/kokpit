@@ -8,7 +8,7 @@ import EmptyState from '../../ui/EmptyState';
 import BookDetailsPanel from './BookDetailsPanel';
 import { BookOpen, FolderOpen, Upload } from 'lucide-react';
 
-const DERS_LER = ['Türkçe', 'Matematik', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Denemeler'];
+const DERS_LER = ['Türkçe', 'Matematik', 'Tarih', 'Coğrafya', 'Vatandaşlık', 'Denemeler', 'Oturumlar'];
 
 const SPINE_COLORS = ['#2C4A6E', '#7A302B', '#2E5C3B', '#5C4A37', '#4A3E56', '#3E4A56'];
 
