@@ -56,28 +56,29 @@ export interface Note {
 export interface Bookmark {
   id?: string;
   bookId: string;
-  sayfa: number;
-  etiket: string;
-  eklenme: Date;
+  page: number;
+  label: string;
+  created: Date;
 }
 
 export interface StrokePoint {
-  x: number; // 0 to 1
-  y: number; // 0 to 1
+  x: number;
+  y: number;
 }
 
 export interface Stroke {
   id: string;
+  tool: 'pen' | 'highlighter';
   color: string;
-  width: number;
-  isHighlighter: boolean;
-  points: StrokePoint[];
+  size: number;
+  points: [number, number, number][]; // [nx, ny, pressure]
 }
 
 export interface Ink {
   bookId: string;
-  sayfa: number;
+  page: number;
   strokes: Stroke[];
+  updated: Date;
 }
 
 export interface MapFeature {
@@ -129,6 +130,60 @@ class KokpitDatabase extends Dexie {
       bookmarks: 'id, bookId, sayfa',
       inks: '[bookId+sayfa], bookId',
       mapFeatures: 'id, category'
+    });
+    this.version(4).stores({
+      books: 'id, ders, ad',
+      exams: 'id, tarih',
+      places: 'id, ad',
+      settings: 'key',
+      notes: 'id, ay',
+      bookmarks: 'id, bookId',
+      inks: '[bookId+page], bookId',
+      mapFeatures: 'id, category'
+    }).upgrade(async tx => {
+      // Migrate bookmarks: sayfa -> page, etiket -> label, eklenme -> created
+      const oldBookmarks = await tx.table('bookmarks').toArray();
+      for (const bm of oldBookmarks) {
+        if ('sayfa' in bm || 'etiket' in bm) {
+          const newBm = {
+            id: bm.id,
+            bookId: bm.bookId,
+            page: bm.sayfa ?? (bm as any).page,
+            label: bm.etiket ?? (bm as any).label ?? `Sayfa ${bm.sayfa}`,
+            created: bm.eklenme ?? (bm as any).created ?? new Date()
+          };
+          await tx.table('bookmarks').put(newBm);
+        }
+      }
+
+      // Migrate inks: [bookId+sayfa] -> [bookId+page], strokes map
+      const oldInks = await tx.table('inks').toArray();
+      for (const ink of oldInks) {
+        if ('sayfa' in ink) {
+          const newInksStrokes = (ink.strokes || []).map((s: any) => {
+            const mappedPoints = (s.points || []).map((pt: any) => {
+              if (Array.isArray(pt)) return pt;
+              return [pt.x, pt.y, 0.5];
+            });
+            return {
+              id: s.id || crypto.randomUUID(),
+              tool: s.isHighlighter ? 'highlighter' : 'pen',
+              color: s.color,
+              size: s.width || s.size || 2,
+              points: mappedPoints
+            };
+          });
+
+          await tx.table('inks').put({
+            bookId: ink.bookId,
+            page: ink.sayfa,
+            strokes: newInksStrokes,
+            updated: ink.updated || new Date()
+          });
+          // Delete old composite key [bookId, sayfa]
+          await tx.table('inks').delete([ink.bookId, ink.sayfa]);
+        }
+      }
     });
   }
 }

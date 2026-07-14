@@ -189,10 +189,10 @@ export default function BookDetailsPanel({
                   <div key={bm.id} className="kp-bookmark-row">
                     <div
                       className="kp-bookmark-clickable"
-                      onClick={() => onOpenReader({ ...book, initialPage: bm.sayfa } as any)}
+                      onClick={() => onOpenReader({ ...book, initialPage: bm.page } as any)}
                     >
-                      <span className="kp-bookmark-page-badge">S. {bm.sayfa}</span>
-                      <span className="kp-bookmark-label" title={bm.etiket}>{bm.etiket}</span>
+                      <span className="kp-bookmark-page-badge">S. {bm.page}</span>
+                      <span className="kp-bookmark-label" title={bm.label}>{bm.label}</span>
                     </div>
                     <button
                       className="kp-bookmark-delete-btn"

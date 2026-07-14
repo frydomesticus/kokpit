@@ -43,7 +43,7 @@ export default function SettingsPanel() {
       backupData.bookmarks = await db.bookmarks.toArray();
       backupData.inks = await db.inks.toArray();
       backupData.mapFeatures = await db.mapFeatures.toArray();
-      backupData.version = 3;
+      backupData.version = 4;
       backupData.exportedAt = new Date().toISOString();
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -70,7 +70,12 @@ export default function SettingsPanel() {
       const fileText = await file.text();
       const backupData = JSON.parse(fileText);
 
-      if (backupData.version !== 1 && backupData.version !== 2 && backupData.version !== 3) {
+      if (
+        backupData.version !== 1 &&
+        backupData.version !== 2 &&
+        backupData.version !== 3 &&
+        backupData.version !== 4
+      ) {
         alert('Hata: Uyumsuz yedek dosyası sürümü.');
         return;
       }
@@ -113,12 +118,37 @@ export default function SettingsPanel() {
         }
         if (backupData.bookmarks) {
           for (const bm of backupData.bookmarks) {
-            await db.bookmarks.put(bm);
+            const mappedBm = {
+              id: bm.id,
+              bookId: bm.bookId,
+              page: bm.page ?? bm.sayfa,
+              label: bm.label ?? bm.etiket ?? `Sayfa ${bm.sayfa || bm.page}`,
+              created: bm.created ? new Date(bm.created) : (bm.eklenme ? new Date(bm.eklenme) : new Date())
+            };
+            await db.bookmarks.put(mappedBm);
           }
         }
         if (backupData.inks) {
           for (const ink of backupData.inks) {
-            await db.inks.put(ink);
+            const mappedStrokes = (ink.strokes || []).map((s: any) => {
+              const mappedPoints = (s.points || []).map((pt: any) => {
+                if (Array.isArray(pt)) return pt;
+                return [pt.x, pt.y, 0.5];
+              });
+              return {
+                id: s.id || crypto.randomUUID(),
+                tool: s.tool || (s.isHighlighter ? 'highlighter' : 'pen'),
+                color: s.color,
+                size: s.size || s.width || 2,
+                points: mappedPoints
+              };
+            });
+            await db.inks.put({
+              bookId: ink.bookId,
+              page: ink.page ?? ink.sayfa,
+              strokes: mappedStrokes,
+              updated: ink.updated ? new Date(ink.updated) : new Date()
+            });
           }
         }
         if (backupData.mapFeatures) {
