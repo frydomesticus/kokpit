@@ -22,8 +22,13 @@ export default function App() {
   // Seed DB on mount
   useEffect(() => {
     async function initDB() {
-      await seedDatabase();
-      setDbSeeded(true);
+      try {
+        await seedDatabase();
+      } catch (err) {
+        console.error("Ön yükleme hatası:", err);
+      } finally {
+        setDbSeeded(true);
+      }
     }
     initDB();
   }, []);

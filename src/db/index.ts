@@ -102,6 +102,7 @@ class KokpitDatabase extends Dexie {
   bookmarks!: Table<Bookmark>;
   inks!: Table<Ink>;
   mapFeatures!: Table<MapFeature>;
+  temp_inks!: Table<any>;
 
   constructor() {
     super('KokpitDatabase');
@@ -138,7 +139,8 @@ class KokpitDatabase extends Dexie {
       settings: 'key',
       notes: 'id, ay',
       bookmarks: 'id, bookId',
-      inks: '[bookId+page], bookId',
+      inks: '[bookId+sayfa], bookId',
+      temp_inks: '[bookId+page], bookId',
       mapFeatures: 'id, category'
     }).upgrade(async tx => {
       // Migrate bookmarks: sayfa -> page, etiket -> label, eklenme -> created
@@ -156,33 +158,46 @@ class KokpitDatabase extends Dexie {
         }
       }
 
-      // Migrate inks: [bookId+sayfa] -> [bookId+page], strokes map
+      // Migrate inks to temp_inks
       const oldInks = await tx.table('inks').toArray();
       for (const ink of oldInks) {
-        if ('sayfa' in ink) {
-          const newInksStrokes = (ink.strokes || []).map((s: any) => {
-            const mappedPoints = (s.points || []).map((pt: any) => {
-              if (Array.isArray(pt)) return pt;
-              return [pt.x, pt.y, 0.5];
-            });
-            return {
-              id: s.id || crypto.randomUUID(),
-              tool: s.isHighlighter ? 'highlighter' : 'pen',
-              color: s.color,
-              size: s.width || s.size || 2,
-              points: mappedPoints
-            };
+        const newInksStrokes = (ink.strokes || []).map((s: any) => {
+          const mappedPoints = (s.points || []).map((pt: any) => {
+            if (Array.isArray(pt)) return pt;
+            return [pt.x, pt.y, 0.5];
           });
+          return {
+            id: s.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11)),
+            tool: s.tool || (s.isHighlighter ? 'highlighter' : 'pen'),
+            color: s.color,
+            size: s.size || s.width || 2,
+            points: mappedPoints
+          };
+        });
 
-          await tx.table('inks').put({
-            bookId: ink.bookId,
-            page: ink.sayfa,
-            strokes: newInksStrokes,
-            updated: ink.updated || new Date()
-          });
-          // Delete old composite key [bookId, sayfa]
-          await tx.table('inks').delete([ink.bookId, ink.sayfa]);
-        }
+        await tx.table('temp_inks').put({
+          bookId: ink.bookId,
+          page: ink.sayfa ?? ink.page,
+          strokes: newInksStrokes,
+          updated: ink.updated || new Date()
+        });
+      }
+    });
+
+    this.version(5).stores({
+      books: 'id, ders, ad',
+      exams: 'id, tarih',
+      places: 'id, ad',
+      settings: 'key',
+      notes: 'id, ay',
+      bookmarks: 'id, bookId',
+      inks: '[bookId+page], bookId',
+      temp_inks: null,
+      mapFeatures: 'id, category'
+    }).upgrade(async tx => {
+      const tempInks = await tx.table('temp_inks').toArray();
+      for (const ink of tempInks) {
+        await tx.table('inks').put(ink);
       }
     });
   }
