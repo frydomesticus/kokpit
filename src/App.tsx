@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, seedDatabase, type Book } from './db';
+import { migrateLegacy } from './db/migrate-legacy';
 import CountdownStamp from './features/countdown/CountdownStamp';
 import OsymTimeline from './features/timeline/OsymTimeline';
 import LibraryShelf from './features/library/LibraryShelf';
@@ -17,12 +18,24 @@ type Tab = 'library' | 'exams' | 'simulation' | 'places' | 'notes' | 'settings' 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('library');
   const [activeBook, setActiveBook] = useState<Book | null>(null);
+  const [openAtPage, setOpenAtPage] = useState<number | undefined>(undefined);
   const [dbSeeded, setDbSeeded] = useState(false);
+
+  const handleOpenBook = (book: Book, page?: number) => {
+    setActiveBook(book);
+    setOpenAtPage(page);
+  };
+
+  const handleCloseBook = () => {
+    setActiveBook(null);
+    setOpenAtPage(undefined);
+  };
 
   // Seed DB on mount
   useEffect(() => {
     async function initDB() {
       try {
+        await migrateLegacy();
         await seedDatabase();
       } catch (err) {
         console.error("Ön yükleme hatası:", err);
@@ -130,7 +143,7 @@ export default function App() {
       {/* Workspace Display Area */}
       <main className="kp-main-content">
         {activeTab === 'library' && (
-          <LibraryShelf onOpenBook={(book) => setActiveBook(book)} />
+          <LibraryShelf onOpenBook={handleOpenBook} />
         )}
         
         {activeTab === 'exams' && (
@@ -162,7 +175,8 @@ export default function App() {
       {activeBook && (
         <PDFReader
           book={activeBook}
-          onClose={() => setActiveBook(null)}
+          openAtPage={openAtPage}
+          onClose={handleCloseBook}
         />
       )}
     </div>

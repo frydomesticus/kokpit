@@ -61,11 +61,6 @@ export interface Bookmark {
   created: Date;
 }
 
-export interface StrokePoint {
-  x: number;
-  y: number;
-}
-
 export interface Stroke {
   id: string;
   tool: 'pen' | 'highlighter';
@@ -102,89 +97,10 @@ class KokpitDatabase extends Dexie {
   bookmarks!: Table<Bookmark>;
   inks!: Table<Ink>;
   mapFeatures!: Table<MapFeature>;
-  temp_inks!: Table<any>;
 
   constructor() {
-    super('KokpitDatabase');
+    super('KokpitDB');
     this.version(1).stores({
-      books: 'id, ders, ad',
-      exams: 'id, tarih',
-      places: 'id, ad',
-      settings: 'key',
-      notes: 'id, ay'
-    });
-    this.version(2).stores({
-      books: 'id, ders, ad',
-      exams: 'id, tarih',
-      places: 'id, ad',
-      settings: 'key',
-      notes: 'id, ay',
-      bookmarks: 'id, bookId, sayfa',
-      inks: '[bookId+sayfa], bookId'
-    });
-    this.version(3).stores({
-      books: 'id, ders, ad',
-      exams: 'id, tarih',
-      places: 'id, ad',
-      settings: 'key',
-      notes: 'id, ay',
-      bookmarks: 'id, bookId, sayfa',
-      inks: '[bookId+sayfa], bookId',
-      mapFeatures: 'id, category'
-    });
-    this.version(4).stores({
-      books: 'id, ders, ad',
-      exams: 'id, tarih',
-      places: 'id, ad',
-      settings: 'key',
-      notes: 'id, ay',
-      bookmarks: 'id, bookId',
-      inks: '[bookId+sayfa], bookId',
-      temp_inks: '[bookId+page], bookId',
-      mapFeatures: 'id, category'
-    }).upgrade(async tx => {
-      // Migrate bookmarks: sayfa -> page, etiket -> label, eklenme -> created
-      const oldBookmarks = await tx.table('bookmarks').toArray();
-      for (const bm of oldBookmarks) {
-        if ('sayfa' in bm || 'etiket' in bm) {
-          const newBm = {
-            id: bm.id,
-            bookId: bm.bookId,
-            page: bm.sayfa ?? (bm as any).page,
-            label: bm.etiket ?? (bm as any).label ?? `Sayfa ${bm.sayfa}`,
-            created: bm.eklenme ?? (bm as any).created ?? new Date()
-          };
-          await tx.table('bookmarks').put(newBm);
-        }
-      }
-
-      // Migrate inks to temp_inks
-      const oldInks = await tx.table('inks').toArray();
-      for (const ink of oldInks) {
-        const newInksStrokes = (ink.strokes || []).map((s: any) => {
-          const mappedPoints = (s.points || []).map((pt: any) => {
-            if (Array.isArray(pt)) return pt;
-            return [pt.x, pt.y, 0.5];
-          });
-          return {
-            id: s.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11)),
-            tool: s.tool || (s.isHighlighter ? 'highlighter' : 'pen'),
-            color: s.color,
-            size: s.size || s.width || 2,
-            points: mappedPoints
-          };
-        });
-
-        await tx.table('temp_inks').put({
-          bookId: ink.bookId,
-          page: ink.sayfa ?? ink.page,
-          strokes: newInksStrokes,
-          updated: ink.updated || new Date()
-        });
-      }
-    });
-
-    this.version(5).stores({
       books: 'id, ders, ad',
       exams: 'id, tarih',
       places: 'id, ad',
@@ -192,13 +108,7 @@ class KokpitDatabase extends Dexie {
       notes: 'id, ay',
       bookmarks: 'id, bookId',
       inks: '[bookId+page], bookId',
-      temp_inks: null,
       mapFeatures: 'id, category'
-    }).upgrade(async tx => {
-      const tempInks = await tx.table('temp_inks').toArray();
-      for (const ink of tempInks) {
-        await tx.table('inks').put(ink);
-      }
     });
   }
 }

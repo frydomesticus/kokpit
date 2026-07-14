@@ -12,7 +12,7 @@ const DERS_LER = ['Türkçe', 'Matematik', 'Tarih', 'Coğrafya', 'Vatandaşlık'
 
 const SPINE_COLORS = ['#2C4A6E', '#7A302B', '#2E5C3B', '#5C4A37', '#4A3E56', '#3E4A56'];
 
-export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) => void }) {
+export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book, openAtPage?: number) => void }) {
   const books = useLiveQuery(() => db.books.toArray()) || [];
   const dailyPageRateSetting = useLiveQuery(() => db.settings.get('dailyPageRate'));
   const examDateSetting = useLiveQuery(() => db.settings.get('examDate'));
@@ -155,7 +155,7 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
     return acc;
   }, {} as Record<string, Book[]>);
 
-  const handleOpenReader = async (book: Book) => {
+  const handleOpenReader = async (book: Book, page?: number) => {
     // If FileSystemHandle was used, we need to load the file blob dynamically
     if (book.fileKey && !book.blob && folderHandle) {
       try {
@@ -166,13 +166,13 @@ export default function LibraryShelf({ onOpenBook }: { onOpenBook: (book: Book) 
         }
         const fileHandle = await folderHandle.getFileHandle(book.fileKey);
         const file = await fileHandle.getFile();
-        onOpenBook({ ...book, blob: file });
+        onOpenBook({ ...book, blob: file }, page);
       } catch (err) {
         console.error('Dosya yüklenemedi. Klasör taşınmış olabilir:', err);
         alert('PDF açılamadı — dosya taşınmış olabilir. Klasörü yeniden bağlayın.');
       }
     } else {
-      onOpenBook(book);
+      onOpenBook(book, page);
     }
   };
 

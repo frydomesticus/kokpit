@@ -1,6 +1,7 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
+import { newId } from '../../lib/id';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import { Shield, Download, Upload } from 'lucide-react';
@@ -43,7 +44,7 @@ export default function SettingsPanel() {
       backupData.bookmarks = await db.bookmarks.toArray();
       backupData.inks = await db.inks.toArray();
       backupData.mapFeatures = await db.mapFeatures.toArray();
-      backupData.version = 4;
+      backupData.version = 2;
       backupData.exportedAt = new Date().toISOString();
 
       const jsonStr = JSON.stringify(backupData, null, 2);
@@ -70,12 +71,7 @@ export default function SettingsPanel() {
       const fileText = await file.text();
       const backupData = JSON.parse(fileText);
 
-      if (
-        backupData.version !== 1 &&
-        backupData.version !== 2 &&
-        backupData.version !== 3 &&
-        backupData.version !== 4
-      ) {
+      if (backupData.version !== 1 && backupData.version !== 2) {
         alert('Hata: Uyumsuz yedek dosyası sürümü.');
         return;
       }
@@ -136,7 +132,7 @@ export default function SettingsPanel() {
                 return [pt.x, pt.y, 0.5];
               });
               return {
-                id: s.id || crypto.randomUUID(),
+                id: s.id || newId(),
                 tool: s.tool || (s.isHighlighter ? 'highlighter' : 'pen'),
                 color: s.color,
                 size: s.size || s.width || 2,

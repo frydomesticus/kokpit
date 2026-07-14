@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, type Stroke } from '../../db';
 import { drawStrokeOnContext, hitTestStroke } from '../../lib/drawing-utils';
+import { newId } from '../../lib/id';
 
 export interface DrawConfig {
   tool: 'pen' | 'highlighter' | 'eraser';
@@ -116,7 +117,7 @@ export function useDrawingState(bookId: string, page: number, zoom: number) {
     if (config.tool === 'eraser') {
       eraseAt(x, y);
     } else {
-      const strokeId = crypto.randomUUID();
+      const strokeId = newId();
       activeStrokeIdRef.current = strokeId;
       currentPointsRef.current = [[x, y, pressure]];
 

@@ -6,16 +6,18 @@ import { useDrawingState } from './useDrawingState';
 import { useTouchNavigation } from './useTouchNavigation';
 import AnnotationToolbar from './AnnotationToolbar';
 import { drawStrokeOnContext } from '../../lib/drawing-utils';
+import { newId } from '../../lib/id';
 import Button from '../../ui/Button';
 import { ChevronLeft, ChevronRight, X, Loader, Bookmark, ChevronDown, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface PDFReaderProps {
   book: Book;
+  openAtPage?: number;
   onClose: () => void;
 }
 
-export default function PDFReader({ book, onClose }: PDFReaderProps) {
-  const [currentPage, setCurrentPage] = useState<number>((book as any).initialPage || book.kalinanSayfa || 1);
+export default function PDFReader({ book, openAtPage, onClose }: PDFReaderProps) {
+  const [currentPage, setCurrentPage] = useState<number>(openAtPage || book.kalinanSayfa || 1);
   const [totalPages, setTotalPages] = useState<number>(book.sayfaSayisi || 1);
   const [loading, setLoading] = useState<boolean>(true);
   const [bookmarksDropdownOpen, setBookmarksDropdownOpen] = useState(false);
@@ -134,7 +136,7 @@ export default function PDFReader({ book, onClose }: PDFReaderProps) {
       const label = prompt('Ayraç için etiket girin:', `Sayfa ${currentPage}`);
       if (label === null) return;
       await db.bookmarks.add({
-        id: crypto.randomUUID(),
+        id: newId(),
         bookId: book.id || '',
         page: currentPage,
         label: label.trim() || `Sayfa ${currentPage}`,

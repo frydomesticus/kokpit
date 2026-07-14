@@ -12,7 +12,7 @@ interface BookDetailsPanelProps {
   book: Book;
   dailyPageRate: number;
   examDate: Date;
-  onOpenReader: (book: Book) => void;
+  onOpenReader: (book: Book, openAtPage?: number) => void;
   onClose: () => void;
 }
 
@@ -189,7 +189,7 @@ export default function BookDetailsPanel({
                   <div key={bm.id} className="kp-bookmark-row">
                     <div
                       className="kp-bookmark-clickable"
-                      onClick={() => onOpenReader({ ...book, initialPage: bm.page } as any)}
+                      onClick={() => onOpenReader(book, bm.page)}
                     >
                       <span className="kp-bookmark-page-badge">S. {bm.page}</span>
                       <span className="kp-bookmark-label" title={bm.label}>{bm.label}</span>
